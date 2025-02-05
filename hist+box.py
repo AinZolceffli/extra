@@ -17,13 +17,13 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
+from tensorflow.keras.layers import SimpleRNN, Dense
 from tensorflow.keras.callbacks import EarlyStopping
 from scipy.stats import norm
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 # Load data
-data = pd.read_csv('sp500_daily_prices.csv', delimiter=',', header=None, names=['date', 'price'])
+data = pd.read_csv('spf500.csv', delimiter=',', header=None, names=['date', 'price'])
 data['price'] = pd.to_numeric(data['price'], errors='coerce')
 data['date'] = pd.to_datetime(data['date'], errors='coerce')
 data = data.dropna()
@@ -55,12 +55,12 @@ def create_sequences(data, seq_length, predict_length):
     return np.array(X), np.array(y)
 
 # Parameters
-seq_length = 14
+seq_length = 7
 predict_length = 5
 
 def build_lstm_model():
     model = Sequential([
-        LSTM(250, activation='tanh', input_shape=(seq_length, 1)),
+        SimpleRNN(250, activation='tanh', input_shape=(seq_length, 1)),
         Dense(predict_length)
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
@@ -79,14 +79,14 @@ rmse_list = []
 mae_list = []
 
 # Run model for 100 different seeds
-for _ in range(2):
+for _ in range(5):
     model = build_lstm_model()
     
     # Early stopping to avoid overfitting
-    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    
+    early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+
     # Train model
-    history = model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=1, validation_data=(X_val, y_val), callbacks=[early_stopping])
+    history = model.fit(X_train, y_train, epochs=100, batch_size=24, verbose=1, validation_data=(X_val, y_val), callbacks=[early_stopping])
     
     # Rolling prediction on test set
     predictions = []
@@ -115,29 +115,35 @@ for _ in range(2):
 
 
 ### **Compute RMSE and MAE Statistics**
-mean_rmse = round(np.mean(rmse_list), 2)
-median_rmse = round(np.median(rmse_list), 2)
-iqr_rmse = round(iqr(rmse_list), 2)
+mean_rmse = np.mean(rmse_list)
+median_rmse = np.median(rmse_list)
+iqr_rmse = iqr(rmse_list)
 
-mean_mae = round(np.mean(mae_list), 2)
-median_mae = round(np.median(mae_list), 2)
-iqr_mae = round(iqr(mae_list), 2)
+mean_mae = np.mean(mae_list)
+median_mae = np.median(mae_list)
+iqr_mae = iqr(mae_list)
 
 ### **RMSE Histogram + Box Plot**
 fig, ax = plt.subplots(2, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [1, 1]})
 
 # Histogram (light blue)
 ax[0].hist(rmse_list, bins=20, density=True, alpha=0.6, 
-           color='#87CEFA', edgecolor='black', linewidth=1.5, label='RMSE Histogram')
+           color='lightblue', edgecolor='black', linewidth=1.5, label='RMSE Histogram')
 
 ax[0].set_xlabel('RMSE', fontsize=23, fontweight='bold')
 ax[0].set_ylabel('Probability Density', fontsize=20, fontweight='bold')
-ax[0].legend(fontsize=23)
+ax[0].tick_params(axis='both', which='both', labelsize=23, width=2)  # Set tick label size and width
+for label in ax[0].get_xticklabels() + ax[0].get_yticklabels():
+    label.set_fontweight('bold')  # Set bold font weight
+#ax[0].legend(fontsize=23)
 
 # Box plot (light blue)
-ax[1].boxplot(rmse_list, vert=False, patch_artist=True, boxprops=dict(facecolor='#87CEFA'))
+ax[1].boxplot(rmse_list, vert=False, patch_artist=True, boxprops=dict(facecolor='lightblue'),medianprops=dict(color='red', linewidth=3))
 ax[1].set_xlabel('RMSE', fontsize=23, fontweight='bold')
 ax[1].set_yticks([])
+for label in ax[1].get_xticklabels():
+    label.set_fontweight('bold')
+    label.set_fontsize(23)
 
 plt.tight_layout()  # Fix layout issues
 plt.show()
@@ -148,16 +154,22 @@ fig, ax = plt.subplots(2, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [1, 
 
 # Histogram (light green)
 ax[0].hist(mae_list, bins=20, density=True, alpha=0.6, 
-           color='#90EE90', edgecolor='black', linewidth=1.5, label='MAE Histogram')
+           color='lightgreen', edgecolor='black', linewidth=1.5, label='MAE Histogram')
 
 ax[0].set_xlabel('MAE', fontsize=23, fontweight='bold')
 ax[0].set_ylabel('Probability Density', fontsize=20, fontweight='bold')
-ax[0].legend(fontsize=23)
+ax[0].tick_params(axis='both', which='both', labelsize=23, width=2)  # Set tick label size and width
+for label in ax[0].get_xticklabels() + ax[0].get_yticklabels():
+    label.set_fontweight('bold')  # Set bold font weight
+#ax[0].legend(fontsize=23)
 
 # Box plot (light green)
-ax[1].boxplot(mae_list, vert=False, patch_artist=True, boxprops=dict(facecolor='#90EE90'))
+ax[1].boxplot(mae_list, vert=False, patch_artist=True, boxprops=dict(facecolor='lightgreen'),medianprops=dict(color='red', linewidth=3))
 ax[1].set_xlabel('MAE', fontsize=23, fontweight='bold')
 ax[1].set_yticks([])
+for label in ax[1].get_xticklabels():
+    label.set_fontweight('bold')
+    label.set_fontsize(23)
 
 plt.tight_layout()  # Fix layout issues
 plt.show()
