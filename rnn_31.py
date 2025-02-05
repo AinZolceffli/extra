@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import random
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
@@ -90,58 +90,57 @@ plt.plot(split_2017_2018['date'][:len(actuals)], actuals, label='Actual Price', 
 all_predictions=[]
 ''''''
 # Run model for 10 different seeds
-random_seeds = random.sample(range(0, 300), 100)
+random_seeds = random.sample(range(0, 300), 2)
 for seed in random_seeds:
-# for _ in range(1):
+#
 # #
-# 	np.random.seed(28)
-# 	tf.random.set_seed(28)
-# 	random.seed(28)
+# 	np.random.seed(seed)
+# 	tf.random.set_seed(seed)
+# 	random.seed(seed)
 
-	np.random.seed(seed)
-	tf.random.set_seed(seed)
-	random.seed(seed)
-
-	model = build_lstm_model()
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+    random.seed(seed)
+    model = build_lstm_model()
 
 	# Early stopping to avoid overfitting
-	early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
 	# Train model
-	history = model.fit(X_train, y_train, epochs=100, batch_size=24, verbose=1, validation_data=(X_val, y_val), callbacks=[early_stopping])
+    history = model.fit(X_train, y_train, epochs=100, batch_size=24, verbose=1, validation_data=(X_val, y_val), callbacks=[early_stopping])
 	#history = model.fit(X_train, y_train, epochs=40, batch_size=24, verbose=1, validation_data=(X_val, y_val))
 
 	# Rolling prediction on test set
-	predictions = []
-	current_sequence = val_data[-seq_length:].tolist()
+    predictions = []
+    current_sequence = val_data[-seq_length:].tolist()
 
-	while len(predictions) < len(test_data):
-		predicted_values = model.predict(np.array(current_sequence).reshape(1, seq_length, 1), verbose=0)[0]
-		predictions.extend(predicted_values)
-		current_sequence.extend(predicted_values)
-		current_sequence = current_sequence[predict_length:]
+    while len(predictions) < len(test_data):
+        predicted_values = model.predict(np.array(current_sequence).reshape(1, seq_length, 1), verbose=0)[0]
+        predictions.extend(predicted_values)
+        current_sequence.extend(predicted_values)
+        current_sequence = current_sequence[predict_length:]
 
 	# Trim predictions to match test_data length
-	predictions = np.array(predictions[:len(test_data)]).reshape(-1, 1)
-	actuals = test_data.reshape(-1, 1)
+    predictions = np.array(predictions[:len(test_data)]).reshape(-1, 1)
+    actuals = test_data.reshape(-1, 1)
 
 	# Denormalize
-	predictions = scaler.inverse_transform(predictions)
-	actuals = scaler.inverse_transform(actuals)
+    predictions = scaler.inverse_transform(predictions)
+    actuals = scaler.inverse_transform(actuals)
 
 	# Calculate RMSE and MAE
-	rmse = np.sqrt(mean_squared_error(actuals, predictions))
-	mae = mean_absolute_error(actuals, predictions)
+    rmse = np.sqrt(mean_squared_error(actuals, predictions))
+    mae = mean_absolute_error(actuals, predictions)
 	#print(f'seed: {seed}')
-	rmse_list.append(rmse)
-	mae_list.append(mae)
+    rmse_list.append(rmse)
+    mae_list.append(mae)
 
-	'''start 20 plot'''
+	#'''start 20 plot'''
 	# Store each run's predictions
-	all_predictions.append(predictions)
+    all_predictions.append(predictions)
 
 	# Plot each run's predictions
-	plt.plot(split_2017_2018['date'][:len(predictions)], predictions, color='red', alpha=0.5)  # Red, semi-transparent
+    plt.plot(split_2017_2018['date'][:len(predictions)], predictions, color='red', alpha=0.3)  # Red, semi-transparent
 
 # Compute average metrics
 avg_rmse = np.mean(rmse_list)
@@ -151,14 +150,18 @@ print(f'Average RMSE over 20 runs: {avg_rmse}')
 print(f'Average MAE over 20 runs: {avg_mae}')
 
 # Labels and title
-plt.xlabel('Date',fontsize=22, fontweight='bold' )
-plt.ylabel('Stock Price', fontsize=22, fontweight='bold')
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
+plt.xlabel('Date',fontsize=23, fontweight='bold' )
+plt.ylabel('Stock Price', fontsize=23, fontweight='bold')
+# Select specific years for x-axis labels
+xtick_labels = ['2017', '2018', '2019']
+xtick_positions = [pd.Timestamp(year=int(year), month=1, day=1) for year in xtick_labels]
+
+plt.xticks(xtick_positions, xtick_labels, fontsize=23, fontweight='bold')
+plt.yticks(fontsize=23, fontweight='bold')
 # plt.title('S&P 500 Test Data: Actual vs. 20 Prediction Runs')
 
 # Add legend
-plt.legend(['Actual Price', 'Predictions'],fontsize=18, prop={'weight': 'bold'} )
+plt.legend(['Actual Price', 'Predictions'],fontsize=23)
 
 # Show plot
 plt.show()
@@ -171,22 +174,28 @@ plt.figure(figsize=(12, 6))
 plt.plot(data['date'], scaler.inverse_transform(data[['scaled_price']]), label='Actual Price', color='blue')
 
 # Highlight training data
-plt.axvline(x=data.iloc[split_idx]['date'], color='green', linestyle='--', label='Validation Split')
+#plt.axvline(x=data.iloc[split_idx]['date'], color='green', linestyle='--', label='Validation Split')
 
 # Highlight test data range
-plt.axvline(x=split_2017_2018.iloc[0]['date'], color='red', linestyle='--', label='Test Start')
+plt.axvline(x=split_2017_2018.iloc[0]['date'], color='black', linestyle='--', label='Test Start')
 
 # Plot predictions on the test set
 test_dates = split_2017_2018['date'].values[:len(predictions)]
-plt.plot(test_dates, predictions, label='Predictions', color='orange', linestyle='dashed')
+plt.plot(test_dates, predictions, label='Predictions', color='red', linestyle='--')
 
 # Labels and legend
-plt.xlabel('Date',fontsize=22, fontweight='bold')
-plt.ylabel('Stock Price', fontsize=22, fontweight='bold')
-plt.xticks(fontsize=16, fontweight='bold')
-plt.yticks(fontsize=16, fontweight='bold')
-plt.legend(fontsize=18, prop={'weight': 'bold'})
+plt.xlabel('Date',fontsize=23, fontweight='bold')
+plt.ylabel('Stock Price', fontsize=23, fontweight='bold')
+# Select specific years for x-axis labels
+xtick_labels = ['2017', '2018', '2019']
+xtick_positions = [pd.Timestamp(year=int(year), month=1, day=1) for year in xtick_labels]
+
+plt.xticks(xtick_positions, xtick_labels, fontsize=23, fontweight='bold')
+
+plt.yticks(fontsize=23, fontweight='bold')
+plt.legend(fontsize=20)
 plt.show()
+#prop={'weight': 'bold'}
 
 # plt.figure(figsize=(10, 5))
 #
